@@ -1,0 +1,12 @@
+﻿{
+  "headerColor": "#95b3d7",
+  "alternatingColors": [
+    "#c5d9f1",
+    "#FFFFFF"
+  ],
+  "headerFontSize": 14,
+  "enableGrouping": true,
+  "generateSummary": true,
+  "enableStyling": true,
+  "copyComments": true
+}

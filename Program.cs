@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using System.Text.Json;
 
 namespace ExcelScript;
 internal class Program
@@ -7,9 +8,13 @@ internal class Program
     {
         var startingTime = DateTime.Now;
 
-        XLColor HeaderColor = XLColor.AirForceBlue;
-        XLColor Alternating1 = XLColor.AliceBlue;
-        XLColor Alternating2 = XLColor.White;
+        Config config = JsonSerializer.Deserialize<Config>(File.ReadAllText("..\\..\\..\\config.json"), AppJsonContext.Default.Config)!;
+        if (config == null)
+        {
+            Console.WriteLine("Config file is missing or invalid.");
+            Console.WriteLine("Using defaults...");
+            config = new Config();
+        }
 
         using var wb = new XLWorkbook("..\\..\\..\\test.xlsx");
         using var newWb = new XLWorkbook();
@@ -217,17 +222,22 @@ internal class Program
             for (int i = 1; i <= lastRowUsed; i++)
             {
                 var row = sheet.Row(i);
+                var alternatingColors = config.AlternatingColors.Length;
+
                 if (i == 1)
                 {
-                    row.Style.Fill.SetBackgroundColor(HeaderColor);
+                    row.Style.Fill.SetBackgroundColor(XLColor.FromHtml(config.HeaderColor));
                     row.Style.Font.FontSize = 14;
                     row.Style.Font.SetBold();
 
                     foreach (var cell in row.CellsUsed())
                         if (!cell.HasFormula) cell.Value = cell.Value.ToString().FirstCharToUpper();
                 }
-                else if (row.RowNumber() % 2 == 0) row.Style.Fill.SetBackgroundColor(Alternating1);
-                else row.Style.Fill.SetBackgroundColor(Alternating2);
+                else
+                {
+                    var index = i % alternatingColors;
+                    row.Style.Fill.SetBackgroundColor(XLColor.FromHtml(config.AlternatingColors[index]));
+                }
             }
 
             sheet.Columns().AdjustToContents();
