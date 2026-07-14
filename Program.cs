@@ -121,10 +121,6 @@ internal class Program
         foreach (var column in summary.ColumnsUsed())
             column.AdjustToContents();
 
-        void SetCell(int row, int column, XLCellValue value)
-        {
-            summary.Cell(row, column).SetValue(value);
-        }
         void SetFormula(int row, int column, string formula)
         {
             summary.Cell(row, column).FormulaA1 = formula;
@@ -137,27 +133,25 @@ internal class Program
         // Styling the new Table
         foreach (var sheet in newWb.Worksheets)
         {
-            int width = sheet.ColumnsUsed().Count();
-            int height = sheet.RowsUsed().Count();
-
-            for (int i = 1; i <= width; i++)
+            var rows = sheet.Rows();
+            var height = sheet.Rows().Count() + 50;
+            for (int i = 1; i <= height; i++)
             {
-                for (int j = 1; j <= height; j++)
+                var row = sheet.Row(i);
+                if (i == 1)
                 {
-                    var cell = sheet.Cell(j, i);
-                    if (j == 1)
-                    {
-                        cell.Style.Fill.SetBackgroundColor(HeaderColor);
-                        cell.Style.Font.FontSize = 14;
-                        cell.Style.Font.SetBold();
-                        cell.Value = cell.Value.ToString().FirstCharToUpper();
-                    }
-                    else if (cell.Address.RowNumber % 2 == 0) cell.Style.Fill.SetBackgroundColor(Alternating1);
-                    else cell.Style.Fill.SetBackgroundColor(Alternating2);
+                    row.Style.Fill.SetBackgroundColor(HeaderColor);
+                    row.Style.Font.FontSize = 14;
+                    row.Style.Font.SetBold();
+
+                    foreach (var cell in row.CellsUsed())
+                        if (!cell.HasFormula) cell.Value = cell.Value.ToString().FirstCharToUpper();
                 }
+                else if (row.RowNumber() % 2 == 0) row.Style.Fill.SetBackgroundColor(Alternating1);
+                else row.Style.Fill.SetBackgroundColor(Alternating2);
             }
 
-            sheet.ColumnsUsed().AdjustToContents();
+            sheet.Columns().AdjustToContents();
         }
 
         // Copy over the comments with their styling

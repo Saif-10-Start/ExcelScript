@@ -118,6 +118,7 @@ namespace ExcelScript
             }
 
             cell.FormulaA1 = MakeMultiHyperlink(formattedNumbers.ToArray());
+            cell.Style.Font.SetUnderline().Font.FontColor = XLColor.Blue;
             return cell;
 
             static string format(string num)
