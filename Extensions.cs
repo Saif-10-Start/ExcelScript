@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using ClosedXML.Excel;
 using System.Text.RegularExpressions;
-using ClosedXML.Excel;
 
 namespace ExcelScript
 {
@@ -30,7 +28,7 @@ namespace ExcelScript
                 "phone number" => HeaderName.PhoneNumber,
                 "location" => HeaderName.Location,
                 "website" => HeaderName.Website,
-                _ => throw new ArgumentException($"Unknown header: {val}")
+                _ => HeaderName.Unknown
             };
         }
         public static HeaderName[] GetHeaders()
@@ -59,10 +57,41 @@ namespace ExcelScript
         public static HeaderName GetHeader(this IXLColumn column)
             => GetHeader(column.FirstCellUsed().Value.ToString());
 
-        public static void CleanLink(this IXLCell cell)
+        private static string MakeMultiHyperlink(string[] values, string separator = " / ")
+        {
+            if (values == null || values.Length == 0) return string.Empty;
+
+            List<string> formulaParts = new();
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                formulaParts.Add($"HYPERLINK(\"CALLTO:{Uri.EscapeDataString(values[i])}\", \"{values[i]}\")");
+
+                if (i < values.Length - 1)
+                    formulaParts.Add($"\"{separator}\"");
+            }
+
+            if (formulaParts.Count == 0) return string.Empty;
+            return $"=CONCATENATE({string.Join(", ", formulaParts)})";
+        }
+
+
+
+        public static IXLCell Strip(this IXLCell cell)
+        {
+            var value = cell.Value.ToString().Trim();
+            value = Regex.Replace(value, @"(?i)^n[./\-]?a$", "");
+            value = Regex.Replace(value, @"^[\-|_|—]+", "");
+
+            cell.Value = value;
+            return cell;
+        }
+
+        public static IXLCell CleanLink(this IXLCell cell)
         {
             var url = cell.GetString();
-            if (string.IsNullOrWhiteSpace(url)) return;
+            if (cell.HasHyperlink) url = cell.GetHyperlink().ExternalAddress.ToString();
+            if (string.IsNullOrWhiteSpace(url)) return cell;
 
             var cleaned = url.Trim();
 
@@ -71,28 +100,71 @@ namespace ExcelScript
 
             cell.SetHyperlink(new XLHyperlink($"https://{cleaned}", $"Visit {cleaned}"));
             cell.Value = cleaned;
+            return cell;
         }
 
-        public static void FormatPhoneNumber(this IXLCell cell)
+        public static IXLCell FormatPhoneNumber(this IXLCell cell)
         {
-            var number = cell.Value.ToString().Replace(" ", "");
-            number = Regex.Replace(number, @"^\+?365", "");
+            var number = cell.Value.ToString().Replace(" ", "").Trim('/');
+            if (string.IsNullOrEmpty(number)) return cell;
 
-            number = number.Insert(3, " ");
-            number = "+365 " + number;
+            var numbers = number.Split('/');
+            List<string> formattedNumbers = [];
 
-            cell.SetHyperlink(new XLHyperlink($"CALLTO:{number}", $"Call {number}"));
-            cell.Value = number;
+            foreach (var num in numbers)
+            {
+                var formatted = format(num);
+                formattedNumbers.Add(formatted);
+            }
+
+            cell.FormulaA1 = MakeMultiHyperlink(formattedNumbers.ToArray());
+            return cell;
+
+            static string format(string num)
+            {
+                if (string.IsNullOrWhiteSpace(num)) return string.Empty;
+
+                var cleaned = Regex.Replace(num, @"[^\d+]", "");
+                var nationalNumber = Regex.Replace(cleaned, @"^(\+?356|\+?365|00356|00365|0+)", "");
+
+                if (nationalNumber.Length < 4)
+                    return "+356 " + nationalNumber;
+
+                var formattedNational = nationalNumber.Insert(4, " ");
+                return "+356 " + formattedNational;
+            }
         }
 
-        public static void FormatMail(this IXLCell cell)
+        public static IXLCell FormatMail(this IXLCell cell)
         {
             var email = cell.Value.ToString().Replace(" ", "");
+            if (string.IsNullOrEmpty(email)) return cell;
+            if (!Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$")) return cell;
 
             cell.SetHyperlink(new XLHyperlink($"MAILTO:{email}", $"Send a mail to {email}"));
             cell.Value = email;
+            return cell;
+        }
+        
+        public static IXLCell FormatLocation(this IXLCell cell)
+        {
+            var location = cell.Value.ToString().Trim();
+            if (string.IsNullOrEmpty(location)) return cell;
+
+            var encodedLocation = Uri.EscapeDataString(location);
+
+            cell.SetHyperlink(new XLHyperlink($"https://www.google.com/maps/search/?api=1&query={encodedLocation}", $"Search {location} on Google Maps"));
+            cell.Value = location;
+            return cell;
         }
 
+        public static bool IsComment(this IXLCell cell)
+        {
+            var value = cell.Value.ToString().Trim();
+            if (string.IsNullOrEmpty(value)) return false;
+
+            return value.StartsWith("#");
+        }
 
 
         public static string FirstCharToUpper(this string input) =>

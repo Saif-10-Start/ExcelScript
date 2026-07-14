@@ -1,7 +1,5 @@
-﻿using System.Text.RegularExpressions;
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace ExcelScript;
 internal class Program
@@ -9,9 +7,16 @@ internal class Program
     static void Main(string[] args)
     {
         var startingTime = DateTime.Now;
-        using var wb = new XLWorkbook("C:\\Users\\Ready2Go\\OneDrive - Detmold\\Dokumente\\Work\\ExcelScript\\test.xlsx");
-        using var newWb = new XLWorkbook();
 
+        XLColor HeaderColor = XLColor.AirForceBlue;
+        XLColor Alternating1 = XLColor.AliceBlue;
+        XLColor Alternating2 = XLColor.White;
+
+        using var wb = new XLWorkbook("..\\..\\..\\test.xlsx");
+        using var newWb = new XLWorkbook();
+        Dictionary<IXLWorksheet, IXLCell> Comments = [];
+
+        // Copy Data
         foreach (var sheet in wb.Worksheets)
         {
             int col = 0;
@@ -22,48 +27,54 @@ internal class Program
 
             foreach (var column in sheet.ColumnsUsed(options: XLCellsUsedOptions.Contents))
             {
-                if (column.IsMainColumn())
+                col += 1;
+                row = 0;
+                var header = Extensions.GetHeader(column.FirstCellUsed().Value.ToString());
+
+                foreach (var cell in column.CellsUsed())
                 {
-                    col += 1;
-                    row = 0;
-                    var header = Extensions.GetHeader(column.FirstCellUsed().Value.ToString());
+                    row += 1;
 
-                    foreach (var cell in column.CellsUsed())
+                    if (cell.IsComment())
                     {
-                        row += 1;
+                        Comments.Add(sheet, cell);
+                        continue;
+                    }
 
-                        var newCell = newWb.Worksheet(sheet.Name).Cell(row, col); ;
-                        newCell.SetValue(cell.Value);
+                    var newCell = newWb.Worksheet(sheet.Name).Cell(row, col); ;
+                    newCell.SetValue(cell.Value);
 
-                        if (!Extensions.GetHeaderNames().Contains(newCell.Value.ToString()) && newCell.Address.RowNumber != 1)
+                    if (newCell.Address.RowNumber != 1)
+                    {
+                        newCell.Strip();    // Strip the cell value from any unwanted characters
+
+                        switch (header)
                         {
-                            // ToDo: NOT WORKING AT ALLLLLLLL...
-                            var value = cell.Value.ToString().Trim();
-                            cell.Value = Regex.Replace(value, @"(?i)^n[./\-]?a$", "");
+                            case HeaderName.Website:
+                                newCell.CleanLink();
+                                break;
 
-                            switch (header)
-                            {
-                                case HeaderName.Website:
-                                    newCell.CleanLink();
-                                    break;
+                            case HeaderName.PhoneNumber:
+                                newCell.FormatPhoneNumber();
+                                break;
 
-                                case HeaderName.PhoneNumber:
-                                    newCell.FormatPhoneNumber();
-                                    break;
+                            case HeaderName.Email:
+                                newCell.FormatMail();
+                                break;
 
-                                case HeaderName.Email:
-                                    newCell.FormatMail();
-                                    break;
+                            case HeaderName.Location:
+                                newCell.FormatLocation();
+                                break;
 
-                                default:
-                                    break;
-                            }
+                            default:
+                                break;
                         }
                     }
                 }
             }
         }
 
+        // Styling the new Table
         foreach (var sheet in newWb.Worksheets)
         {
             int width = sheet.ColumnsUsed().Count();
@@ -76,21 +87,47 @@ internal class Program
                     var cell = sheet.Cell(j, i);
                     if (j == 1)
                     {
-                        cell.Style.Fill.SetBackgroundColor(XLColor.AirForceBlue);
+                        cell.Style.Fill.SetBackgroundColor(HeaderColor);
                         cell.Style.Font.FontSize = 14;
                         cell.Style.Font.SetBold();
                         cell.Value = cell.Value.ToString().FirstCharToUpper();
                     }
-                    else if (cell.Address.RowNumber % 2 == 0) cell.Style.Fill.SetBackgroundColor(XLColor.AliceBlue);
-                    else cell.Style.Fill.SetBackgroundColor(XLColor.White);
+                    else if (cell.Address.RowNumber % 2 == 0) cell.Style.Fill.SetBackgroundColor(Alternating1);
+                    else cell.Style.Fill.SetBackgroundColor(Alternating2);
                 }
             }
 
             sheet.ColumnsUsed().AdjustToContents();
         }
 
+        // Copy over the comments with their styling
+        foreach (var comment in Comments)
+        {
+            var newCell = newWb.Worksheet(comment.Key.Name).Cell(comment.Value.Address.RowNumber, comment.Value.Address.ColumnNumber);
+            newCell.SetValue(comment.Value.Value);
+            newCell.Style = comment.Value.Style;
+        }
+
+        // Add Sumary List Sheet
+        var summary = newWb.AddWorksheet("Summary List");
+        string[] categories = ["Category", "Number of Contractors", "Number of Physical shops", "Providing Physical Installation", "Importing Supply", "Local Supply", "Provide Delivery"];
+        var sheets = newWb.Worksheets.Where(s => s.Name != "Summary List").ToArray();
+
+        foreach (var category in categories)
+        {
+            var cell = summary.Cell(1, Array.IndexOf(categories, category) + 1);
+            cell.SetValue(category);
+            cell.Style.Fill.SetBackgroundColor(HeaderColor);
+        }
+        foreach (var sheet in sheets)
+        {
+            var cell = summary.Cell(Array.IndexOf(sheets, sheet) + 2, 1);
+            cell.SetValue(sheet.Name);
+        }
+
+
         Console.WriteLine("Saving the new Table...");
-        newWb.SaveAs("temp.xlsx");
+        newWb.SaveAs("..\\..\\..\\OutPut.xlsx");
         Console.WriteLine("Done!");
         Console.WriteLine($"Everything finished in: {DateTime.Now - startingTime}");
     }

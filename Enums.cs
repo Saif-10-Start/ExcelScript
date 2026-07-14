@@ -14,6 +14,7 @@ namespace ExcelScript
         Email,
         PhoneNumber,
         Location,
-        Website
+        Website,
+        Unknown
     }
 }
