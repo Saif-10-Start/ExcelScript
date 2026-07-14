@@ -1,5 +1,7 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Office2016.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace ExcelScript;
 internal class Program
@@ -74,6 +76,64 @@ internal class Program
             }
         }
 
+        // Add Sumary List Sheet
+        var summary = newWb.AddWorksheet("Summary List", 1);
+        string[] categories = ["Category", "Number of Contractors", "Number of Physical stores", "Providing Physical Installation", "Importing Supply", "Local Supply", "Provide Delivery"];
+        var sheets = newWb.Worksheets.Where(s => s.Name != "Summary List").ToArray();
+
+        foreach (var category in categories)
+        {
+            var cell = summary.Cell(1, Array.IndexOf(categories, category) + 1);
+            cell.SetValue(category);
+        }
+        foreach (var sheet in sheets)
+        {
+            var row = Array.IndexOf(sheets, sheet) + 2;
+
+            // Set BackLink to the summary
+            var col = sheet.Row(1).CellsUsed().Last().Address.ColumnNumber + 1;
+            var cell = sheet.Cell(1, col);
+            cell.SetFormulaA1($"=HYPERLINK(\"#'Summary List'!A{row}\", \"Back to Summary\")");
+            cell.Style.Font.SetUnderline().Font.FontColor = XLColor.Blue;
+
+            // Set Category
+            SetFormula(row, 1, $"=HYPERLINK(\"#'{sheet.Name}'!A1\", \"{sheet.Name}\")");
+            summary.Cell(row, 1).Style.Font.SetUnderline().Font.FontColor = XLColor.Blue;
+
+            // Set Number of Contractors
+            SetFormula(row, 2, $"=COUNTA('{sheet.Name}'!A:A)-1");
+
+            // Set Number of Physical Shops
+            SetCounter(row, 3, "Physical Store", "B" + row, sheet.Name);
+
+            // Set Providing Physical Installation
+            SetCounter(row, 4, "Installation", "B" + row, sheet.Name);
+
+            // Set Importing Supply
+            SetCounter(row, 5, "Import", "B" + row, sheet.Name);
+
+            // Set Local Supply
+            SetCounter(row, 6, "Local Supply", "B" + row, sheet.Name);
+
+            // Set Provide Delivery
+            SetCounter(row, 7, "Delivery", "B" + row, sheet.Name);
+        }
+        foreach (var column in summary.ColumnsUsed())
+            column.AdjustToContents();
+
+        void SetCell(int row, int column, XLCellValue value)
+        {
+            summary.Cell(row, column).SetValue(value);
+        }
+        void SetFormula(int row, int column, string formula)
+        {
+            summary.Cell(row, column).FormulaA1 = formula;
+            summary.Cell(row, column).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        }
+        void SetCounter(int row, int column, string match, string numberOfField, string sheetName)
+            => SetFormula(row, column, $"=IFERROR(COUNTIF(INDEX('{sheetName}'!$A:$Z, 0, MATCH(\"{match}\", '{sheetName}'!$1:$1, 0)), \"yes\") & \" out of \" & {numberOfField}, \"—\")");
+
+
         // Styling the new Table
         foreach (var sheet in newWb.Worksheets)
         {
@@ -108,26 +168,8 @@ internal class Program
             newCell.Style = comment.Value.Style;
         }
 
-        // Add Sumary List Sheet
-        var summary = newWb.AddWorksheet("Summary List");
-        string[] categories = ["Category", "Number of Contractors", "Number of Physical shops", "Providing Physical Installation", "Importing Supply", "Local Supply", "Provide Delivery"];
-        var sheets = newWb.Worksheets.Where(s => s.Name != "Summary List").ToArray();
-
-        foreach (var category in categories)
-        {
-            var cell = summary.Cell(1, Array.IndexOf(categories, category) + 1);
-            cell.SetValue(category);
-            cell.Style.Fill.SetBackgroundColor(HeaderColor);
-        }
-        foreach (var sheet in sheets)
-        {
-            var cell = summary.Cell(Array.IndexOf(sheets, sheet) + 2, 1);
-            cell.SetValue(sheet.Name);
-        }
-
-
         Console.WriteLine("Saving the new Table...");
-        newWb.SaveAs("..\\..\\..\\OutPut.xlsx");
+        newWb.SaveAs("..\\..\\..\\Output.xlsx");
         Console.WriteLine("Done!");
         Console.WriteLine($"Everything finished in: {DateTime.Now - startingTime}");
     }
