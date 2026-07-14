@@ -1,0 +1,54 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Ready2Go\\OneDrive - Detmold\\Dokumente\\Work\\ExcelScript\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|c:\\users\\ready2go\\onedrive - detmold\\dokumente\\work\\excelscript\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|c:\\users\\ready2go\\onedrive - detmold\\dokumente\\work\\excelscript\\extensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|solutionrelative:extensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Extensions.cs",
+              "DocumentMoniker": "C:\\Users\\Ready2Go\\OneDrive - Detmold\\Dokumente\\Work\\ExcelScript\\Extensions.cs",
+              "RelativeDocumentMoniker": "Extensions.cs",
+              "ToolTip": "C:\\Users\\Ready2Go\\OneDrive - Detmold\\Dokumente\\Work\\ExcelScript\\Extensions.cs",
+              "RelativeToolTip": "Extensions.cs",
+              "ViewState": "AgIAADIAAAAAAAAAAAAcwE4AAAA7AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-13T14:18:07.166Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\Ready2Go\\OneDrive - Detmold\\Dokumente\\Work\\ExcelScript\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\Ready2Go\\OneDrive - Detmold\\Dokumente\\Work\\ExcelScript\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAB0AAAAAAAAAAAAwwCcAAABAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-13T09:28:25.228Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
