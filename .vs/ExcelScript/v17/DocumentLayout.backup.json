@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\HolzkaemperFabio\\source\\repos\\ExcelScript\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|c:\\users\\holzkaemperfabio\\source\\repos\\excelscript\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|c:\\users\\holzkaemperfabio\\source\\repos\\excelscript\\config.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|solutionrelative:config.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|c:\\users\\holzkaemperfabio\\source\\repos\\excelscript\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{DC2A78CA-6D44-4294-A5FA-34CFA99F6E1E}|ExcelScript.csproj|c:\\users\\holzkaemperfabio\\source\\repos\\excelscript\\extensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -22,7 +22,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 233,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Bookmark",
@@ -34,13 +34,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "config.json",
               "DocumentMoniker": "C:\\Users\\HolzkaemperFabio\\source\\repos\\ExcelScript\\config.json",
               "RelativeDocumentMoniker": "config.json",
               "ToolTip": "C:\\Users\\HolzkaemperFabio\\source\\repos\\ExcelScript\\config.json",
               "RelativeToolTip": "config.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAWAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAZAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-07-14T13:56:48.636Z",
               "EditorCaption": ""
@@ -60,7 +60,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\HolzkaemperFabio\\source\\repos\\ExcelScript\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",

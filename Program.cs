@@ -110,16 +110,19 @@ internal class Program
         }
 
         // 2. Insert blank rows to group items together (Perfectly safe now)
-        var groupedSplits = rowsToInsert
+        if (config.GroupingEnabled)
+        {
+            var groupedSplits = rowsToInsert
             .GroupBy(x => x.SheetName)
             .ToDictionary(g => g.Key, g => g.Select(x => x.RowNumber).OrderByDescending(r => r).ToList());
 
-        foreach (var kvp in groupedSplits)
-        {
-            var sheetToModify = newWb.Worksheet(kvp.Key);
-            foreach (var rowNum in kvp.Value)
+            foreach (var kvp in groupedSplits)
             {
-                sheetToModify.Row(rowNum).InsertRowsAbove(1);
+                var sheetToModify = newWb.Worksheet(kvp.Key);
+                foreach (var rowNum in kvp.Value)
+                {
+                    sheetToModify.Row(rowNum).InsertRowsAbove(1);
+                }
             }
         }
 
@@ -162,93 +165,102 @@ internal class Program
         }
 
         // 4. Generate the Summary List and the Hyperlinks
-        var summary = newWb.AddWorksheet("Summary List", 1);
-        string[] categories = ["Category", "Number of Contractors", "Number of Physical stores", "Providing Physical Installation", "Importing Supply", "Local Supply", "Provide Delivery"];
-        var sheets = newWb.Worksheets.Where(s => s.Name != "Summary List").ToArray();
-
-        foreach (var category in categories)
+        if (config.GenerateSummary)
         {
-            var cell = summary.Cell(1, Array.IndexOf(categories, category) + 1);
-            cell.SetValue(category);
+            var summary = newWb.AddWorksheet("Summary List", 1);
+            string[] categories = ["Category", "Number of Contractors", "Number of Physical stores", "Providing Physical Installation", "Importing Supply", "Local Supply", "Provide Delivery"];
+            var sheets = newWb.Worksheets.Where(s => s.Name != "Summary List").ToArray();
+
+            foreach (var category in categories)
+            {
+                var cell = summary.Cell(1, Array.IndexOf(categories, category) + 1);
+                cell.SetValue(category);
+            }
+            foreach (var sheet in sheets)
+            {
+                var row = Array.IndexOf(sheets, sheet) + 2;
+
+                // Set BackLink to the summary
+                var col = sheet.Row(1).CellsUsed().Last().Address.ColumnNumber + 1;
+                var cell = sheet.Cell(1, col);
+                cell.SetFormulaA1($"=HYPERLINK(\"#'Summary List'!A{row}\", \"Back to Summary\")");
+                cell.Style.Font.SetUnderline().Font.FontColor = XLColor.Blue;
+
+                // Set Category
+                SetFormula(row, 1, $"=HYPERLINK(\"#'{sheet.Name}'!A1\", \"{sheet.Name}\")");
+                summary.Cell(row, 1).Style.Font.SetUnderline().Font.FontColor = XLColor.Blue;
+
+                // Set Number of Contractors
+                SetFormula(row, 2, $"=COUNTA('{sheet.Name}'!A:A)-1");
+
+                // Set Number of Physical Shops
+                SetCounter(row, 3, "Physical Store", "B" + row, sheet.Name);
+
+                // Set Providing Physical Installation
+                SetCounter(row, 4, "Installation", "B" + row, sheet.Name);
+
+                // Set Importing Supply
+                SetCounter(row, 5, "Import", "B" + row, sheet.Name);
+
+                // Set Local Supply
+                SetCounter(row, 6, "Local Supply", "B" + row, sheet.Name);
+
+                // Set Provide Delivery
+                SetCounter(row, 7, "Delivery", "B" + row, sheet.Name);
+            }
+            foreach (var column in summary.ColumnsUsed())
+                column.AdjustToContents();
+
+            void SetFormula(int row, int column, string formula)
+            {
+                summary.Cell(row, column).FormulaA1 = formula;
+                summary.Cell(row, column).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            void SetCounter(int row, int column, string match, string numberOfField, string sheetName)
+                => SetFormula(row, column, $"=IFERROR(COUNTIF(INDEX('{sheetName}'!$A:$Z, 0, MATCH(\"{match}\", '{sheetName}'!$1:$1, 0)), \"yes\") & \" out of \" & {numberOfField}, \"—\")");
         }
-        foreach (var sheet in sheets)
-        {
-            var row = Array.IndexOf(sheets, sheet) + 2;
-
-            // Set BackLink to the summary
-            var col = sheet.Row(1).CellsUsed().Last().Address.ColumnNumber + 1;
-            var cell = sheet.Cell(1, col);
-            cell.SetFormulaA1($"=HYPERLINK(\"#'Summary List'!A{row}\", \"Back to Summary\")");
-            cell.Style.Font.SetUnderline().Font.FontColor = XLColor.Blue;
-
-            // Set Category
-            SetFormula(row, 1, $"=HYPERLINK(\"#'{sheet.Name}'!A1\", \"{sheet.Name}\")");
-            summary.Cell(row, 1).Style.Font.SetUnderline().Font.FontColor = XLColor.Blue;
-
-            // Set Number of Contractors
-            SetFormula(row, 2, $"=COUNTA('{sheet.Name}'!A:A)-1");
-
-            // Set Number of Physical Shops
-            SetCounter(row, 3, "Physical Store", "B" + row, sheet.Name);
-
-            // Set Providing Physical Installation
-            SetCounter(row, 4, "Installation", "B" + row, sheet.Name);
-
-            // Set Importing Supply
-            SetCounter(row, 5, "Import", "B" + row, sheet.Name);
-
-            // Set Local Supply
-            SetCounter(row, 6, "Local Supply", "B" + row, sheet.Name);
-
-            // Set Provide Delivery
-            SetCounter(row, 7, "Delivery", "B" + row, sheet.Name);
-        }
-        foreach (var column in summary.ColumnsUsed())
-            column.AdjustToContents();
-
-        void SetFormula(int row, int column, string formula)
-        {
-            summary.Cell(row, column).FormulaA1 = formula;
-            summary.Cell(row, column).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-        }
-        void SetCounter(int row, int column, string match, string numberOfField, string sheetName)
-            => SetFormula(row, column, $"=IFERROR(COUNTIF(INDEX('{sheetName}'!$A:$Z, 0, MATCH(\"{match}\", '{sheetName}'!$1:$1, 0)), \"yes\") & \" out of \" & {numberOfField}, \"—\")");
 
 
         // 5. Style the new Table
-        foreach (var sheet in newWb.Worksheets)
+        if (config.StylingEnabled)
         {
-            var lastRowUsed = sheet.Cells().Count() + 50;
-            for (int i = 1; i <= lastRowUsed; i++)
+            foreach (var sheet in newWb.Worksheets)
             {
-                var row = sheet.Row(i);
-                var alternatingColors = config.AlternatingColors.Length;
-
-                if (i == 1)
+                var lastRowUsed = sheet.Cells().Count() + 50;
+                for (int i = 1; i <= lastRowUsed; i++)
                 {
-                    row.Style.Fill.SetBackgroundColor(XLColor.FromHtml(config.HeaderColor));
-                    row.Style.Font.FontSize = 14;
-                    row.Style.Font.SetBold();
+                    var row = sheet.Row(i);
+                    var alternatingColors = config.AlternatingColors.Length;
 
-                    foreach (var cell in row.CellsUsed())
-                        if (!cell.HasFormula) cell.Value = cell.Value.ToString().FirstCharToUpper();
+                    if (i == 1)
+                    {
+                        row.Style.Fill.SetBackgroundColor(XLColor.FromHtml(config.HeaderColor));
+                        row.Style.Font.FontSize = config.HeaderFontSize;
+                        row.Style.Font.SetBold();
+
+                        foreach (var cell in row.CellsUsed())
+                            if (!cell.HasFormula) cell.Value = cell.Value.ToString().FirstCharToUpper();
+                    }
+                    else
+                    {
+                        var index = i % alternatingColors;
+                        row.Style.Fill.SetBackgroundColor(XLColor.FromHtml(config.AlternatingColors[index]));
+                    }
                 }
-                else
-                {
-                    var index = i % alternatingColors;
-                    row.Style.Fill.SetBackgroundColor(XLColor.FromHtml(config.AlternatingColors[index]));
-                }
+
+                sheet.Columns().AdjustToContents();
             }
-
-            sheet.Columns().AdjustToContents();
         }
 
         // 6. Copy over the comments to the new workbook
-        foreach (var comment in Comments)
+        if (config.CopyComments)
         {
-            var newCell = newWb.Worksheet(comment.Key.Name).Cell(comment.Value.Address.RowNumber, comment.Value.Address.ColumnNumber);
-            newCell.SetValue(comment.Value.Value);
-            newCell.Style = comment.Value.Style;
+            foreach (var comment in Comments)
+            {
+                var newCell = newWb.Worksheet(comment.Key.Name).Cell(comment.Value.Address.RowNumber, comment.Value.Address.ColumnNumber);
+                newCell.SetValue(comment.Value.Value);
+                newCell.Style = comment.Value.Style;
+            }
         }
 
         Console.WriteLine("Saving the new Table...");

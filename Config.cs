@@ -22,7 +22,7 @@ namespace ExcelScript
         public int BodyFontSize { get; set; } = 12;
 
         [JsonPropertyName("enableGrouping")]
-        public bool EnableGrouping { get; set; } = true;
+        public bool GroupingEnabled { get; set; } = true;
 
         [JsonPropertyName("generateSummary")]
         public bool GenerateSummary { get; set; } = true;
@@ -31,6 +31,6 @@ namespace ExcelScript
         public bool CopyComments { get; set; } = true;
 
         [JsonPropertyName("enableStyling")]
-        public bool EnableStyling { get; set; } = true;
+        public bool StylingEnabled { get; set; } = true;
     }
 }
