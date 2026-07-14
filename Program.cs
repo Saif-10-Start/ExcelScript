@@ -1,7 +1,4 @@
 ﻿using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Office2016.Excel;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace ExcelScript;
 internal class Program
@@ -18,20 +15,53 @@ internal class Program
         using var newWb = new XLWorkbook();
         Dictionary<IXLWorksheet, IXLCell> Comments = [];
 
-        // Copy Data
+        List<(string SheetName, int RowNumber)> rowsToInsert = new();
+
+        // 1. Copy Raw Data (Without formatting or native hyperlinks to avoid shifting bugs)
         foreach (var sheet in wb.Worksheets)
         {
-            int col = 0;
-            int row = 0;
-
             if (sheet.Name == "Summary List") continue;
             newWb.AddWorksheet(sheet.Name);
+            var targetSheet = newWb.Worksheet(sheet.Name);
 
+            int sourceItemCol = -1;
+            int searchColIdx = 1;
+
+            foreach (var firstRowCell in sheet.FirstRowUsed().Cells())
+            {
+                var header = Extensions.GetHeader(firstRowCell.Value.ToString());
+                if (header == HeaderName.Item)
+                {
+                    sourceItemCol = searchColIdx;
+                    break;
+                }
+                searchColIdx++;
+            }
+            if (sourceItemCol != -1)
+            {
+                var srcLastRow = sheet.LastRowUsed().RowNumber();
+                var srcLastCol = sheet.LastColumnUsed().ColumnNumber();
+                if (srcLastRow > 1)
+                {
+                    var srcRange = sheet.Range(2, 1, srcLastRow, srcLastCol);
+                    srcRange.Sort(sourceItemCol);
+                }
+            }
+
+            int col = 0;
+            int itemColIndex = -1; // Track which column column is the "Item" column
+
+            // COPY ALL COLUMNS FIRST
             foreach (var column in sheet.ColumnsUsed(options: XLCellsUsedOptions.Contents))
             {
                 col += 1;
-                row = 0;
+                int row = 0;
                 var header = Extensions.GetHeader(column.FirstCellUsed().Value.ToString());
+
+                if (header == HeaderName.Item)
+                {
+                    itemColIndex = col;
+                }
 
                 foreach (var cell in column.CellsUsed())
                 {
@@ -43,40 +73,90 @@ internal class Program
                         continue;
                     }
 
-                    var newCell = newWb.Worksheet(sheet.Name).Cell(row, col); ;
+                    var newCell = targetSheet.Cell(row, col);
                     newCell.SetValue(cell.Value);
 
                     if (newCell.Address.RowNumber != 1)
                     {
-                        newCell.Strip();    // Strip the cell value from any unwanted characters
+                        newCell.Strip();
+                    }
+                }
+            }
 
-                        switch (header)
+            // Detect splits on targetSheet (No sorting needed here anymore, it's already sorted!)
+            if (itemColIndex != -1)
+            {
+                var lastRow = targetSheet.LastRowUsed()!.RowNumber();
+                if (lastRow > 1)
+                {
+                    var itemCells = targetSheet.Column(itemColIndex).Cells(2, lastRow).ToList();
+                    for (int i = 0; i < itemCells.Count - 1; i++)
+                    {
+                        var currentCell = itemCells[i];
+                        var nextCell = itemCells[i + 1];
+
+                        if (currentCell.Value.ToString().ToLower() != nextCell.Value.ToString().ToLower())
                         {
-                            case HeaderName.Website:
-                                newCell.CleanLink();
-                                break;
-
-                            case HeaderName.PhoneNumber:
-                                newCell.FormatPhoneNumber();
-                                break;
-
-                            case HeaderName.Email:
-                                newCell.FormatMail();
-                                break;
-
-                            case HeaderName.Location:
-                                newCell.FormatLocation();
-                                break;
-
-                            default:
-                                break;
+                            rowsToInsert.Add((targetSheet.Name, nextCell.Address.RowNumber));
                         }
                     }
                 }
             }
         }
 
-        // Add Sumary List Sheet
+        // 2. Insert blank rows to group items together (Perfectly safe now)
+        var groupedSplits = rowsToInsert
+            .GroupBy(x => x.SheetName)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.RowNumber).OrderByDescending(r => r).ToList());
+
+        foreach (var kvp in groupedSplits)
+        {
+            var sheetToModify = newWb.Worksheet(kvp.Key);
+            foreach (var rowNum in kvp.Value)
+            {
+                sheetToModify.Row(rowNum).InsertRowsAbove(1);
+            }
+        }
+
+        // 3. Post-Insert Formatting Loop (Apply CleanLink, FormatPhoneNumber, etc. after rows are finalized)
+        foreach (var sheet in newWb.Worksheets)
+        {
+            if (sheet.Name == "Summary List") continue;
+
+            foreach (var column in sheet.ColumnsUsed())
+            {
+                var header = Extensions.GetHeader(column.FirstCellUsed().Value.ToString());
+
+                foreach (var cell in column.CellsUsed())
+                {
+                    if (cell.Address.RowNumber == 1) continue; // Skip header
+
+                    switch (header)
+                    {
+                        case HeaderName.Website:
+                            cell.CleanLink();
+                            break;
+
+                        case HeaderName.PhoneNumber:
+                            cell.FormatPhoneNumber();
+                            break;
+
+                        case HeaderName.Email:
+                            cell.FormatMail();
+                            break;
+
+                        case HeaderName.Location:
+                            cell.FormatLocation();
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+
+        // 4. Generate the Summary List and the Hyperlinks
         var summary = newWb.AddWorksheet("Summary List", 1);
         string[] categories = ["Category", "Number of Contractors", "Number of Physical stores", "Providing Physical Installation", "Importing Supply", "Local Supply", "Provide Delivery"];
         var sheets = newWb.Worksheets.Where(s => s.Name != "Summary List").ToArray();
@@ -130,12 +210,11 @@ internal class Program
             => SetFormula(row, column, $"=IFERROR(COUNTIF(INDEX('{sheetName}'!$A:$Z, 0, MATCH(\"{match}\", '{sheetName}'!$1:$1, 0)), \"yes\") & \" out of \" & {numberOfField}, \"—\")");
 
 
-        // Styling the new Table
+        // 5. Style the new Table
         foreach (var sheet in newWb.Worksheets)
         {
-            var rows = sheet.Rows();
-            var height = sheet.Rows().Count() + 50;
-            for (int i = 1; i <= height; i++)
+            var lastRowUsed = sheet.Cells().Count() + 50;
+            for (int i = 1; i <= lastRowUsed; i++)
             {
                 var row = sheet.Row(i);
                 if (i == 1)
@@ -154,7 +233,7 @@ internal class Program
             sheet.Columns().AdjustToContents();
         }
 
-        // Copy over the comments with their styling
+        // 6. Copy over the comments to the new workbook
         foreach (var comment in Comments)
         {
             var newCell = newWb.Worksheet(comment.Key.Name).Cell(comment.Value.Address.RowNumber, comment.Value.Address.ColumnNumber);
