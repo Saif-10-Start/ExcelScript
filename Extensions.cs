@@ -57,26 +57,6 @@ namespace ExcelScript
         public static HeaderName GetHeader(this IXLColumn column)
             => GetHeader(column.FirstCellUsed().Value.ToString());
 
-        private static string MakeMultiHyperlink(string[] values, string separator = " / ")
-        {
-            if (values == null || values.Length == 0) return string.Empty;
-
-            List<string> formulaParts = new();
-
-            for (int i = 0; i < values.Length; i++)
-            {
-                formulaParts.Add($"HYPERLINK(\"CALLTO:{Uri.EscapeDataString(values[i])}\", \"{values[i]}\")");
-
-                if (i < values.Length - 1)
-                    formulaParts.Add($"\"{separator}\"");
-            }
-
-            if (formulaParts.Count == 0) return string.Empty;
-            return $"=CONCATENATE({string.Join(", ", formulaParts)})";
-        }
-
-
-
         public static IXLCell Strip(this IXLCell cell)
         {
             var value = cell.Value.ToString().Trim();
@@ -117,8 +97,6 @@ namespace ExcelScript
                 formattedNumbers.Add(formatted);
             }
 
-            cell.FormulaA1 = MakeMultiHyperlink(formattedNumbers.ToArray());
-            cell.Style.Font.SetUnderline().Font.FontColor = XLColor.Blue;
             return cell;
 
             static string format(string num)
