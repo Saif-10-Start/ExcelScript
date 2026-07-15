@@ -97,6 +97,7 @@ namespace ExcelScript
                 formattedNumbers.Add(formatted);
             }
 
+            cell.Value = string.Join(" / ", formattedNumbers);
             return cell;
 
             static string format(string num)
